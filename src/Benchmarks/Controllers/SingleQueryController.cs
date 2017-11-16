@@ -18,6 +18,13 @@ namespace Benchmarks.Controllers
             return ExecuteQuery<RawDb>();
         }
 
+        [HttpGet("peregrine")]
+        [Produces("application/json")]
+        public Task<World> Peregrine()
+        {
+            return ExecuteQuery<PeregrineDb>();
+        }
+
         [HttpGet("dapper")]
         [Produces("application/json")]
         public Task<World> Dapper()

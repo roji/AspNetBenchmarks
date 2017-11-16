@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Npgsql;
+using Peregrine;
 
 namespace Benchmarks
 {
@@ -106,6 +107,30 @@ namespace Benchmarks
                 services.AddScoped<RawDb>();
             }
 
+            if (Scenarios.Any("Peregrine"))
+            {
+                var connectionStringBuilder
+                    = new NpgsqlConnectionStringBuilder(appSettings.ConnectionString);
+
+                services.AddSingleton(sp => 
+                    new PGSessionPool(
+                        connectionStringBuilder.Host,
+                        connectionStringBuilder.Port,
+                        connectionStringBuilder.Database,
+                        connectionStringBuilder.Username,
+                        connectionStringBuilder.Password,
+                        32)
+                    {
+                        OnCreate = async s =>
+                        {
+                            await s.PrepareAsync("f", "select id, message from fortune");
+                            await s.PrepareAsync("w", "select id, randomnumber from world where id = $1");
+                        }
+                    });
+                
+                services.AddScoped<PeregrineDb>();
+            }
+
             if (Scenarios.Any("Dapper"))
             {
                 services.AddScoped<DapperDb>();
@@ -189,6 +214,11 @@ namespace Benchmarks
                 app.UseSingleQueryRaw();
             }
 
+            if (Scenarios.DbSingleQueryPeregrine)
+            {
+                app.UseSingleQueryPeregrine();
+            }
+
             if (Scenarios.DbSingleQueryDapper)
             {
                 app.UseSingleQueryDapper();
@@ -208,6 +238,11 @@ namespace Benchmarks
             if (Scenarios.DbMultiQueryRaw)
             {
                 app.UseMultipleQueriesRaw();
+            }
+
+            if (Scenarios.DbMultiQueryPeregrine)
+            {
+                app.UseMultipleQueriesPeregrine();
             }
 
             if (Scenarios.DbMultiQueryDapper)
@@ -231,6 +266,11 @@ namespace Benchmarks
                 app.UseMultipleUpdatesRaw();
             }
 
+            if (Scenarios.DbMultiUpdatePeregrine)
+            {
+                app.UseMultipleUpdatesPeregrine();
+            }
+
             if (Scenarios.DbMultiUpdateDapper)
             {
                 app.UseMultipleUpdatesDapper();
@@ -245,6 +285,11 @@ namespace Benchmarks
             if (Scenarios.DbFortunesRaw)
             {
                 app.UseFortunesRaw();
+            }
+
+            if (Scenarios.DbFortunesPeregrine)
+            {
+                app.UseFortunesPeregrine();
             }
 
             if (Scenarios.DbFortunesDapper)

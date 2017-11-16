@@ -18,6 +18,13 @@ namespace Benchmarks.Controllers
             return View("Fortunes", await db.LoadFortunesRows());
         }
 
+        [HttpGet("peregrine")]
+        public async Task<IActionResult> Peregrine()
+        {
+            var db = HttpContext.RequestServices.GetRequiredService<PeregrineDb>();
+            return View("Fortunes", await db.LoadFortunesRows());
+        }
+
         [HttpGet("dapper")]
         public async Task<IActionResult> Dapper()
         {
