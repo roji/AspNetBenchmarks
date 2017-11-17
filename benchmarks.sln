@@ -92,7 +92,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mssql-techempower", "mssql-
 		docker\mssql-techempower\stop.sh = docker\mssql-techempower\stop.sh
 	EndProjectSection
 EndProject
-<<<<<<< d4ef3b493890f1d8becb9d3030331fb6e7ccfb7c
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mongodb-techempower", "mongodb-techempower", "{13B1DC5E-AD37-4958-B22D-FAE26F6D4058}"
 	ProjectSection(SolutionItems) = preProject
 		docker\mongodb-techempower\build.sh = docker\mongodb-techempower\build.sh
@@ -103,9 +102,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mongodb-techempower", "mong
 		docker\mongodb-techempower\stop.sh = docker\mongodb-techempower\stop.sh
 	EndProjectSection
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peregrine", "..\DataAccessPerformance\experiments\Peregrine\Peregrine\Peregrine.csproj", "{B4964AB6-3146-46FE-9295-C8519B9199B2}"
-=======
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peregrine", "DataAccessPerformance\experiments\Peregrine\Peregrine\Peregrine.csproj", "{7ECCE3ED-3B53-4469-800F-EA690FD990DC}"
->>>>>>> Fixing project reference
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -179,14 +175,6 @@ Global
 		{174DC3AC-F883-4B85-BE90-EA5B7BB01961}.Release|Any CPU.Build.0 = Release|Any CPU
 		{174DC3AC-F883-4B85-BE90-EA5B7BB01961}.Release|x86.ActiveCfg = Release|Any CPU
 		{174DC3AC-F883-4B85-BE90-EA5B7BB01961}.Release|x86.Build.0 = Release|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Debug|x86.Build.0 = Debug|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Release|x86.ActiveCfg = Release|Any CPU
-		{7ECCE3ED-3B53-4469-800F-EA690FD990DC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -205,9 +193,12 @@ Global
 		{6B2BF265-7141-40E2-9BEC-DAFB9547B942} = {EF444B27-3CBA-4581-893A-7F6DB5527371}
 		{17D18F38-2030-46BE-8C5A-48607A6E69AA} = {EF444B27-3CBA-4581-893A-7F6DB5527371}
 		{FA7BA2F5-47DA-418F-B29F-458714F44C89} = {EF444B27-3CBA-4581-893A-7F6DB5527371}
+<<<<<<< 120681c497d7e549599bcb1bde160c0b097e2058
 		{13B1DC5E-AD37-4958-B22D-FAE26F6D4058} = {EF444B27-3CBA-4581-893A-7F6DB5527371}
 		{B4964AB6-3146-46FE-9295-C8519B9199B2} = {C2EB60CC-CA5A-4E49-A3F8-4432FB117869}
 		{7ECCE3ED-3B53-4469-800F-EA690FD990DC} = {995FCFF9-E5F6-4BDD-8E5B-FBDEA21145F9}
+=======
+>>>>>>> Replacing raw with PeregrineDb
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C48AD7EE-82B1-4307-A869-3FC14AC9B21F}

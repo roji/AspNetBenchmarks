@@ -12,13 +12,13 @@ using Microsoft.Extensions.Options;
 
 namespace Benchmarks.Data
 {
-    public class RawDb : IDb
+    public class _RawDb : IDb
     {
         private readonly IRandom _random;
         private readonly DbProviderFactory _dbProviderFactory;
         private readonly string _connectionString;
 
-        public RawDb(IRandom random, DbProviderFactory dbProviderFactory, IOptions<AppSettings> appSettings)
+        public _RawDb(IRandom random, DbProviderFactory dbProviderFactory, IOptions<AppSettings> appSettings)
         {
             _random = random;
             _dbProviderFactory = dbProviderFactory;
