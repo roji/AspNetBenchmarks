@@ -6,6 +6,7 @@
     <MvcRazorCompileOnPublish>true</MvcRazorCompileOnPublish>
     <NETCoreAppImplicitPackageVersion>$(BenchmarksNETCoreAppImplicitPackageVersion)</NETCoreAppImplicitPackageVersion>
     <RuntimeFrameworkVersion>$(BenchmarksRuntimeFrameworkVersion)</RuntimeFrameworkVersion>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(BenchmarksAspNetCoreVersion)' == '2.1.0-*'">
@@ -45,15 +46,6 @@
 
   <ItemGroup Condition="'$(BenchmarksAspNetCoreVersion)' == '2.1.0-*'">
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets" Version="$(BenchmarksAspNetCoreVersion)" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(BenchmarksAspNetCoreVersion)' == '2.0.0' or '$(BenchmarksAspNetCoreVersion)' == '2.0.1'">
-    <!-- Scokets where only available as a preview package for 2.0 -->
-    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets" Version="2.0.0-*" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\DataAccessPerformance\experiments\Peregrine\Peregrine\Peregrine.csproj" />
   </ItemGroup>
 
 </Project>
