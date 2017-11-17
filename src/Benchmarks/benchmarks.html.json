@@ -12,6 +12,9 @@
   "DbFortunesRaw": {
     "Path": "/fortunes/raw"
   },
+  "DbFortunesPeregrine": {
+    "Path": "/fortunes/peregrine"
+  },
   "DbFortunesDapper": {
     "Path": "/fortunes/dapper"
   },
