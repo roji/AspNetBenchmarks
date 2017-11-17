@@ -53,7 +53,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\DataAccessPerformance\experiments\Peregrine\Peregrine\Peregrine.csproj" />
+    <ProjectReference Include="..\..\DataAccessPerformance\experiments\Peregrine\Peregrine\Peregrine.csproj" />
   </ItemGroup>
 
 </Project>
