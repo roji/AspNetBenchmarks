@@ -12,13 +12,13 @@ using Microsoft.Extensions.Options;
 
 namespace Benchmarks.Data
 {
-    public class _RawDb : IDb
+    public class PeregrineDb : IDb
     {
         private readonly IRandom _random;
         private readonly DbProviderFactory _dbProviderFactory;
         private readonly string _connectionString;
 
-        public _RawDb(IRandom random, DbProviderFactory dbProviderFactory, IOptions<AppSettings> appSettings)
+        public PeregrineDb(IRandom random, DbProviderFactory dbProviderFactory, IOptions<AppSettings> appSettings)
         {
             _random = random;
             _dbProviderFactory = dbProviderFactory;
