@@ -8,12 +8,12 @@ using Peregrine;
 
 namespace Benchmarks.Data
 {
-    public class RawDb : IDb
+    public class PeregrineDb : IDb
     {
         private readonly IRandom _random;
         private readonly PGSessionPool _sessionPool;
 
-        public RawDb(IRandom random, PGSessionPool sessionPool)
+        public PeregrineDb(IRandom random, PGSessionPool sessionPool)
         {
             _random = random;
             _sessionPool = sessionPool;
