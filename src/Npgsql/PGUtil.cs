@@ -43,6 +43,12 @@ namespace Npgsql
         internal static readonly UTF8Encoding UTF8Encoding = new UTF8Encoding(false, true);
         internal static readonly UTF8Encoding RelaxedUTF8Encoding = new UTF8Encoding(false, false);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static T Expect<T>(IBackendMessage msg)
+            => msg is T asT
+                ? asT
+                : throw new NpgsqlException($"Received backend message {msg.Code} while expecting {typeof(T).Name}. Please file a bug.");
+
         internal static void ValidateBackendMessageCode(BackendMessageCode code)
         {
             switch (code)

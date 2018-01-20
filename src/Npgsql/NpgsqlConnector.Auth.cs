@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Npgsql.BackendMessages;
 using Npgsql.FrontendMessages;
 using Npgsql.Logging;
+using static Npgsql.PGUtil;
 
 namespace Npgsql
 {
@@ -19,7 +20,7 @@ namespace Npgsql
         {
             Log.Trace("Authenticating...", Id);
 
-            var msg = await ReadExpecting<AuthenticationRequestMessage>(async);
+            var msg = Expect<AuthenticationRequestMessage>(await ReadMessage(async));
             timeout.Check();
             switch (msg.AuthRequestType)
             {
@@ -69,7 +70,7 @@ namespace Npgsql
                 .CreateClearText(passwd)
                 .Write(WriteBuffer, async);
             await WriteBuffer.Flush(async);
-            await ReadExpecting<AuthenticationRequestMessage>(async);
+            Expect<AuthenticationRequestMessage>(await ReadMessage(async));
         }
 
         async Task AuthenticateMD5(string username, byte[] salt, bool async)
@@ -94,7 +95,7 @@ namespace Npgsql
                 .CreateMD5(passwd, username, salt)
                 .Write(WriteBuffer, async);
             await WriteBuffer.Flush(async);
-            await ReadExpecting<AuthenticationRequestMessage>(async);
+            Expect<AuthenticationRequestMessage>(await ReadMessage(async));
         }
 
 #pragma warning disable CA1801 // Review unused parameters
@@ -198,7 +199,7 @@ namespace Npgsql
             {
                 if (_leftToRead == 0)
                 {
-                    var response = await _connector.ReadExpecting<AuthenticationRequestMessage>(async);
+                    var response = Expect<AuthenticationRequestMessage>(await _connector.ReadMessage(async));
                     if (response.AuthRequestType == AuthenticationRequestType.AuthenticationOk)
                         throw new AuthenticationCompleteException();
                     var gssMsg = response as AuthenticationGSSContinueMessage;
