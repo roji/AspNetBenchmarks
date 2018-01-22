@@ -41,6 +41,7 @@ using Npgsql.BackendMessages;
 using Npgsql.FrontendMessages;
 using Npgsql.Logging;
 using Npgsql.TypeMapping;
+using static Npgsql.PGUtil;
 
 namespace Npgsql
 {
@@ -847,22 +848,137 @@ namespace Npgsql
             => ReadMessage(false, dataRowLoadingMode).Result;
 
         [ItemCanBeNull]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal async ValueTask<IBackendMessage> ReadMessage(
+        internal ValueTask<IBackendMessage> ReadMessage(
             bool async,
             DataRowLoadingMode dataRowLoadingMode = DataRowLoadingMode.NonSequential,
-            bool readingNotifications = false
-        )
+            bool readingNotifications = false)
+        {
+            if (_pendingPrependedResponses > 0 ||
+                dataRowLoadingMode != DataRowLoadingMode.NonSequential ||
+                readingNotifications ||
+                ReadBuffer.ReadBytesLeft < 5)
+            {
+                return ReadMessageLong(async, dataRowLoadingMode, readingNotifications);
+            }
+
+            var messageCode = (BackendMessageCode)ReadBuffer.ReadByte();
+            switch (messageCode)
+            {
+            case BackendMessageCode.NoticeResponse:
+            case BackendMessageCode.NotificationResponse:
+            case BackendMessageCode.ParameterStatus:
+            case BackendMessageCode.ErrorResponse:
+                ReadBuffer.ReadPosition--;
+                return ReadMessageLong(async, dataRowLoadingMode, readingNotifications);
+            }
+
+            PGUtil.ValidateBackendMessageCode(messageCode);
+            var len = ReadBuffer.ReadInt32() - 4; // Transmitted length includes itself
+            if (len > ReadBuffer.ReadBytesLeft)
+            {
+                ReadBuffer.ReadPosition -= 5;
+                return ReadMessageLong(async, dataRowLoadingMode, readingNotifications);
+            }
+
+            return new ValueTask<IBackendMessage>(ParseServerMessage(ReadBuffer, messageCode, len, false));
+        }
+
+        [ItemCanBeNull]
+        async ValueTask<IBackendMessage> ReadMessageLong(
+            bool async,
+            DataRowLoadingMode dataRowLoadingMode = DataRowLoadingMode.NonSequential,
+            bool readingNotifications = false,
+            bool isPrependedMessage = false)
         {
             // First read the responses of any prepended messages.
-            if (_pendingPrependedResponses > 0)
-                await ReadPrependedMessages(async);
+            if (!isPrependedMessage && _pendingPrependedResponses > 0)
+            {
+                try
+                {
+                    ReceiveTimeout = InternalCommandTimeout;
+                    for (; _pendingPrependedResponses > 0; _pendingPrependedResponses--)
+                        await ReadMessageLong(async, DataRowLoadingMode.Skip, false, true);
+                }
+                catch (PostgresException)
+                {
+                    Break();
+                    throw;
+                }
+            }
 
-            // Now read a non-prepended message
             try
             {
                 ReceiveTimeout = UserTimeout;
-                return await DoReadMessage(async, dataRowLoadingMode, readingNotifications);
+                PostgresException error = null;
+
+                while (true)
+                {
+                    await ReadBuffer.Ensure(5, async, readingNotifications);
+                    var messageCode = (BackendMessageCode)ReadBuffer.ReadByte();
+                    PGUtil.ValidateBackendMessageCode(messageCode);
+                    var len = ReadBuffer.ReadInt32() - 4; // Transmitted length includes itself
+
+                    if ((messageCode == BackendMessageCode.DataRow &&
+                         dataRowLoadingMode != DataRowLoadingMode.NonSequential) ||
+                        messageCode == BackendMessageCode.CopyData)
+                    {
+                        if (dataRowLoadingMode == DataRowLoadingMode.Skip)
+                        {
+                            await ReadBuffer.Skip(len, async);
+                            continue;
+                        }
+                    }
+                    else if (len > ReadBuffer.ReadBytesLeft)
+                    {
+                        if (len > ReadBuffer.Size)
+                        {
+                            if (_origReadBuffer == null)
+                                _origReadBuffer = ReadBuffer;
+                            ReadBuffer = ReadBuffer.AllocateOversize(len);
+                        }
+
+                        await ReadBuffer.Ensure(len, async);
+                    }
+
+                    var msg = ParseServerMessage(ReadBuffer, messageCode, len, isPrependedMessage);
+
+                    switch (messageCode)
+                    {
+                    case BackendMessageCode.ErrorResponse:
+                        Debug.Assert(msg == null);
+
+                        // An ErrorResponse is (almost) always followed by a ReadyForQuery. Save the error
+                        // and throw it as an exception when the ReadyForQuery is received (next).
+                        error = new PostgresException(ReadBuffer);
+
+                        if (State == ConnectorState.Connecting)
+                        {
+                            // During the startup/authentication phase, an ErrorResponse isn't followed by
+                            // an RFQ. Instead, the server closes the connection immediately
+                            throw error;
+                        }
+
+                        continue;
+
+                    case BackendMessageCode.ReadyForQuery:
+                        if (error != null)
+                            throw error;
+                        break;
+
+                    // Asynchronous messages which can come anytime, they have already been handled
+                    // in ParseServerMessage. Read the next message.
+                    case BackendMessageCode.NoticeResponse:
+                    case BackendMessageCode.NotificationResponse:
+                    case BackendMessageCode.ParameterStatus:
+                        Debug.Assert(msg == null);
+                        if (!readingNotifications)
+                            continue;
+                        return null;
+                    }
+
+                    Debug.Assert(msg != null, "Message is null for code: " + messageCode);
+                    return msg;
+                }
             }
             catch (PostgresException)
             {
@@ -876,81 +992,6 @@ namespace Npgsql
                     EndUserAction();
                 }
                 throw;
-            }
-        }
-
-        [ItemCanBeNull]
-        async ValueTask<IBackendMessage> DoReadMessage(
-            bool async,
-            DataRowLoadingMode dataRowLoadingMode = DataRowLoadingMode.NonSequential,
-            bool readingNotifications = false,
-            bool isPrependedMessage = false)
-        {
-            PostgresException error = null;
-
-            while (true)
-            {
-                await ReadBuffer.Ensure(5, async, readingNotifications);
-                var messageCode = (BackendMessageCode)ReadBuffer.ReadByte();
-                PGUtil.ValidateBackendMessageCode(messageCode);
-                var len = ReadBuffer.ReadInt32() - 4;  // Transmitted length includes itself
-
-                if ((messageCode == BackendMessageCode.DataRow && dataRowLoadingMode != DataRowLoadingMode.NonSequential) ||
-                     messageCode == BackendMessageCode.CopyData)
-                {
-                    if (dataRowLoadingMode == DataRowLoadingMode.Skip)
-                    {
-                        await ReadBuffer.Skip(len, async);
-                        continue;
-                    }
-                }
-                else if (len > ReadBuffer.ReadBytesLeft)
-                {
-                    if (len > ReadBuffer.Size)
-                    {
-                        if (_origReadBuffer == null)
-                            _origReadBuffer = ReadBuffer;
-                        ReadBuffer = ReadBuffer.AllocateOversize(len);
-                    }
-                    await ReadBuffer.Ensure(len, async);
-                }
-
-                var msg = ParseServerMessage(ReadBuffer, messageCode, len, isPrependedMessage);
-
-                switch (messageCode) {
-                case BackendMessageCode.ErrorResponse:
-                    Debug.Assert(msg == null);
-
-                    // An ErrorResponse is (almost) always followed by a ReadyForQuery. Save the error
-                    // and throw it as an exception when the ReadyForQuery is received (next).
-                    error = new PostgresException(ReadBuffer);
-
-                    if (State == ConnectorState.Connecting) {
-                        // During the startup/authentication phase, an ErrorResponse isn't followed by
-                        // an RFQ. Instead, the server closes the connection immediately
-                        throw error;
-                    }
-
-                    continue;
-
-                case BackendMessageCode.ReadyForQuery:
-                    if (error != null)
-                        throw error;
-                    break;
-
-                // Asynchronous messages which can come anytime, they have already been handled
-                // in ParseServerMessage. Read the next message.
-                case BackendMessageCode.NoticeResponse:
-                case BackendMessageCode.NotificationResponse:
-                case BackendMessageCode.ParameterStatus:
-                    Debug.Assert(msg == null);
-                    if (!readingNotifications)
-                        continue;
-                    return null;
-                }
-
-                Debug.Assert(msg != null, "Message is null for code: " + messageCode);
-                return msg;
             }
         }
 
@@ -1057,80 +1098,23 @@ namespace Npgsql
             }
         }
 
-        async Task ReadPrependedMessages(bool async)
-        {
-            Debug.Assert(_pendingPrependedResponses > 0);
-            try
-            {
-                ReceiveTimeout = InternalCommandTimeout;
-                for (; _pendingPrependedResponses > 0; _pendingPrependedResponses--)
-                    await DoReadMessage(async, DataRowLoadingMode.Skip, false, true);
-            }
-            catch (PostgresException)
-            {
-                Break();
-                throw;
-            }
-        }
-
         /// <summary>
         /// Reads backend messages and discards them, stopping only after a message of the given type has
         /// been seen.
         /// </summary>
-        internal async ValueTask<IBackendMessage> SkipUntil(BackendMessageCode stopAt, bool async)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal IBackendMessage SkipUntil(BackendMessageCode stopAt)
         {
             Debug.Assert(stopAt != BackendMessageCode.DataRow, "Shouldn't be used for rows, doesn't know about sequential");
 
             while (true)
             {
-                var msg = await ReadMessage(async, DataRowLoadingMode.Skip);
+                var msg = ReadMessage(false, DataRowLoadingMode.Skip).GetAwaiter().GetResult();
                 Debug.Assert(!(msg is DataRowMessage));
-                if (msg.Code == stopAt) {
+                if (msg.Code == stopAt)
                     return msg;
-                }
             }
         }
-
-        internal IBackendMessage SkipUntil(BackendMessageCode stopAt) => SkipUntil(stopAt, false).Result;
-
-        /// <summary>
-        /// Reads backend messages and discards them, stopping only after a message of the given types has
-        /// been seen.
-        /// </summary>
-        internal async ValueTask<IBackendMessage> SkipUntil(BackendMessageCode stopAt1, BackendMessageCode stopAt2, bool async)
-        {
-            Debug.Assert(stopAt1 != BackendMessageCode.DataRow, "Shouldn't be used for rows, doesn't know about sequential");
-            Debug.Assert(stopAt2 != BackendMessageCode.DataRow, "Shouldn't be used for rows, doesn't know about sequential");
-
-            while (true) {
-                var msg = await ReadMessage(async, DataRowLoadingMode.Skip);
-                Debug.Assert(!(msg is DataRowMessage));
-                if (msg.Code == stopAt1 || msg.Code == stopAt2) {
-                    return msg;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Reads a single message, expecting it to be of type <typeparamref name="T"/>.
-        /// Any other message causes an exception to be raised and the connector to be broken.
-        /// Asynchronous messages (e.g. Notice) are treated and ignored. ErrorResponses raise an
-        /// exception but do not cause the connector to break.
-        /// </summary>
-        internal async ValueTask<T> ReadExpecting<T>(bool async) where T : class, IBackendMessage
-        {
-            var msg = await ReadMessage(async);
-            var asExpected = msg as T;
-            if (asExpected == null)
-            {
-                Break();
-                throw new NpgsqlException($"Received backend message {msg.Code} while expecting {typeof(T).Name}. Please file a bug.");
-            }
-            return asExpected;
-        }
-
-        internal T ReadExpecting<T>() where T : class, IBackendMessage
-            => ReadExpecting<T>(false).GetAwaiter().GetResult();
 
         #endregion Backend message processing
 
@@ -1678,7 +1662,7 @@ namespace Npgsql
 
                 Log.Trace("Performed keepalive", Id);
                 SendMessage(PregeneratedMessage.KeepAlive);
-                SkipUntil(BackendMessageCode.ReadyForQuery, false).GetAwaiter().GetResult();
+                SkipUntil(BackendMessageCode.ReadyForQuery);
             }
             catch (Exception e)
             {
@@ -1961,8 +1945,8 @@ namespace Npgsql
 
             await message.Write(WriteBuffer, async);
             await WriteBuffer.Flush(async);
-            await ReadExpecting<CommandCompleteMessage>(async);
-            await ReadExpecting<ReadyForQueryMessage>(async);
+            Expect<CommandCompleteMessage>(await ReadMessage(async));
+            Expect<ReadyForQueryMessage>(await ReadMessage(async));
         }
 
         #endregion
