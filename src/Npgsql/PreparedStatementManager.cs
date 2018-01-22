@@ -13,6 +13,9 @@ namespace Npgsql
 {
     class PreparedStatementManager
     {
+        internal Dictionary<string, List<NpgsqlStatement>> CommandsBySql { get; } =
+            new Dictionary<string, List<NpgsqlStatement>>();
+
         internal int MaxAutoPrepared { get; }
         internal int UsagesBeforePrepare { get; }
 
