@@ -68,6 +68,8 @@ namespace Npgsql
         /// </summary>
         internal readonly IdleConnectorList Idle;
 
+        readonly NpgsqlConnector[] FastIdle;
+
         readonly Queue<WaitingOpenAttempt> _waiting;
 
         struct WaitingOpenAttempt
@@ -109,6 +111,7 @@ namespace Npgsql
             _pruningInterval = TimeSpan.FromSeconds(Settings.ConnectionPruningInterval);
             _prunedConnectors = new List<NpgsqlConnector>();
             Idle = new IdleConnectorList();
+            FastIdle = new NpgsqlConnector[_max];
             _waiting = new Queue<WaitingOpenAttempt>();
         }
 
@@ -126,6 +129,31 @@ namespace Npgsql
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ValueTask<NpgsqlConnector> Allocate(NpgsqlConnection conn, NpgsqlTimeout timeout, bool async, CancellationToken cancellationToken)
+        {
+            for (var i = 0; i < FastIdle.Length; i++)
+            {
+                var item = FastIdle[i];
+
+                if (item != null
+                    && Interlocked.CompareExchange(ref FastIdle[i], null, item) == item)
+                {
+                    item.Connection = conn;
+                    return new ValueTask<NpgsqlConnector>(item);
+                }
+            }
+
+            return CreatePhysicalConnection(conn, timeout, async, cancellationToken);
+        }
+
+        async ValueTask<NpgsqlConnector> CreatePhysicalConnection(NpgsqlConnection conn, NpgsqlTimeout timeout, bool async, CancellationToken cancellationToken)
+        {
+            var connector = new NpgsqlConnector(conn) { ClearCounter = _clearCounter };
+            await connector.Open(timeout, async, cancellationToken);
+            return connector;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ValueTask<NpgsqlConnector> AllocateOrig(NpgsqlConnection conn, NpgsqlTimeout timeout, bool async, CancellationToken cancellationToken)
         {
             Monitor.Enter(this);
 
@@ -223,6 +251,19 @@ namespace Npgsql
         }
 
         internal void Release(NpgsqlConnector connector)
+        {
+            for (var i = 0; i < FastIdle.Length; i++)
+            {
+                if (Interlocked.CompareExchange(ref FastIdle[i], connector, null) == null)
+                {
+                    return;
+                }
+            }
+
+            connector.Dispose();
+        }
+
+        internal void ReleaseOrig(NpgsqlConnector connector)
         {
             // If Clear/ClearAll has been been called since this connector was first opened,
             // throw it away.
