@@ -71,8 +71,11 @@ namespace Npgsql
         internal NpgsqlConnectionStringBuilder Settings { get; }
         internal string ConnectionString { get; }
 
-        [CanBeNull] ProvideClientCertificatesCallback ProvideClientCertificatesCallback { get; }
-        [CanBeNull] RemoteCertificateValidationCallback UserCertificateValidationCallback { get; }
+        [CanBeNull]
+        ProvideClientCertificatesCallback ProvideClientCertificatesCallback { get; }
+
+        [CanBeNull]
+        RemoteCertificateValidationCallback UserCertificateValidationCallback { get; }
 
         internal Encoding TextEncoding { get; private set; }
 
@@ -85,8 +88,7 @@ namespace Npgsql
         /// If we read a data row that's bigger than <see cref="ReadBuffer"/>, we allocate an oversize buffer.
         /// The original (smaller) buffer is stored here, and restored when the connection is reset.
         /// </summary>
-        [CanBeNull]
-        NpgsqlReadBuffer _origReadBuffer;
+        [CanBeNull] NpgsqlReadBuffer _origReadBuffer;
 
         /// <summary>
         /// Buffer used for writing data.
@@ -150,8 +152,7 @@ namespace Npgsql
         /// </summary>
         int _pendingPrependedResponses;
 
-        [CanBeNull]
-        internal NpgsqlDataReader CurrentReader;
+        [CanBeNull] internal NpgsqlDataReader CurrentReader;
 
         internal PreparedStatementManager PreparedStatementManager;
 
@@ -210,8 +211,7 @@ namespace Npgsql
         /// The command currently being executed by the connector, null otherwise.
         /// Used only for concurrent use error reporting purposes.
         /// </summary>
-        [CanBeNull]
-        NpgsqlCommand _currentCommand;
+        [CanBeNull] NpgsqlCommand _currentCommand;
 
         /// <summary>
         /// If pooled, the timestamp when this connector was returned to the pool.
@@ -236,28 +236,34 @@ namespace Npgsql
         #region Reusable Message Objects
 
         // Frontend
-        internal readonly BindMessage     BindMessage     = new BindMessage();
+        internal readonly BindMessage BindMessage = new BindMessage();
         internal readonly DescribeMessage DescribeMessage = new DescribeMessage();
-        internal readonly CloseMessage    CloseMessage    = new CloseMessage();
+
+        internal readonly CloseMessage CloseMessage = new CloseMessage();
+
         // ParseMessage and QueryMessage depend on the encoding, which isn't known until open-time
         internal ParseMessage ParseMessage;
+
         internal QueryMessage QueryMessage;
+
         // The reset message depends on the server version, which isn't known until open-time
-        [CanBeNull]
-        PregeneratedMessage _resetWithoutDeallocateMessage;
+        [CanBeNull] PregeneratedMessage _resetWithoutDeallocateMessage;
 
         // Backend
-        readonly CommandCompleteMessage      _commandCompleteMessage      = new CommandCompleteMessage();
-        readonly ReadyForQueryMessage        _readyForQueryMessage        = new ReadyForQueryMessage();
+        readonly CommandCompleteMessage _commandCompleteMessage = new CommandCompleteMessage();
+        readonly ReadyForQueryMessage _readyForQueryMessage = new ReadyForQueryMessage();
         readonly ParameterDescriptionMessage _parameterDescriptionMessage = new ParameterDescriptionMessage();
-        readonly DataRowMessage              _dataRowMessage              = new DataRowMessage();
+        readonly DataRowMessage _dataRowMessage = new DataRowMessage();
 
         // Since COPY is rarely used, allocate these lazily
         CopyInResponseMessage _copyInResponseMessage;
         CopyOutResponseMessage _copyOutResponseMessage;
-        CopyDataMessage        _copyDataMessage;
+        CopyDataMessage _copyDataMessage;
 
         #endregion
+
+        internal NpgsqlDefaultDataReader DefaultDataReader { get; }
+        internal NpgsqlSequentialDataReader SequentialDataReader { get; }
 
         #region Constructors
 
@@ -295,6 +301,9 @@ namespace Npgsql
 
             if (IsKeepAliveEnabled)
                 _keepAliveTimer = new Timer(PerformKeepAlive, null, Timeout.Infinite, Timeout.Infinite);
+
+            DefaultDataReader = new NpgsqlDefaultDataReader(this);
+            SequentialDataReader = new NpgsqlSequentialDataReader(this);
 
             // TODO: Not just for automatic preparation anymore...
             PreparedStatementManager = new PreparedStatementManager(this);

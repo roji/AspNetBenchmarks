@@ -44,10 +44,15 @@ namespace Npgsql
         [CanBeNull]
         SequentialByteaStream _stream;
 
-        internal NpgsqlSequentialDataReader(NpgsqlCommand command, CommandBehavior behavior, List<NpgsqlStatement> statements, Task sendTask)
-            : base(command, behavior, statements, sendTask)
+        internal NpgsqlSequentialDataReader(NpgsqlConnector connector)
+            : base(connector) {}
+
+        internal override void Init(NpgsqlCommand command, CommandBehavior behavior, List<NpgsqlStatement> statements, Task sendTask)
         {
+            base.Init(command, behavior, statements, sendTask);
             Debug.Assert(!command.Parameters.HasOutputParameters);
+            // In sequential reading mode we always use the connector's buffer, unlike in non-sequential
+            // where an oversize buffer may be allocated for a big DataRow
             Buffer = Connector.ReadBuffer;
         }
 
