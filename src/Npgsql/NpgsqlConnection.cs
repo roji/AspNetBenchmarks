@@ -130,7 +130,10 @@ namespace Npgsql
         /// Initializes a new instance of the
         /// <see cref="NpgsqlConnection">NpgsqlConnection</see> class.
         /// </summary>
-        public NpgsqlConnection() : this("") {}
+        public NpgsqlConnection()
+        {
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         /// Initializes a new instance of <see cref="NpgsqlConnection"/> with the given connection string.
