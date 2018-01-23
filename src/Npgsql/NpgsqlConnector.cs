@@ -58,6 +58,8 @@ namespace Npgsql
         /// </summary>
         Socket _socket;
 
+        AwaitableSocket _awaitableSocket;
+
         /// <summary>
         /// The physical connection stream to the backend, without anything on top.
         /// </summary>
@@ -586,6 +588,16 @@ namespace Npgsql
                         break;
                     }
                 }
+
+                _awaitableSocket = new AwaitableSocket(
+                    new SocketAsyncEventArgs
+                    {
+                        //RemoteEndPoint = new IPEndPoint(IPAddress.Parse(_host), _port)
+                    },
+                    _socket);
+
+                WriteBuffer.AwaitableSocket = _awaitableSocket;
+                ReadBuffer.AwaitableSocket = _awaitableSocket;
 
                 Log.Trace($"Socket connected to {Host}:{Port}");
             }

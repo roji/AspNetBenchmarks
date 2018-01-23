@@ -49,6 +49,8 @@ namespace Npgsql
 
         internal Stream Underlying { private get; set; }
 
+        internal AwaitableSocket AwaitableSocket { private get; set; }
+
         /// <summary>
         /// The total byte length of the buffer.
         /// </summary>
@@ -136,9 +138,20 @@ namespace Npgsql
                 while (count > 0)
                 {
                     var toRead = Size - _filledBytes;
+                    /*
                     var read = async
                         ? await Underlying.ReadAsync(Buffer, _filledBytes, toRead)
                         : Underlying.Read(Buffer, _filledBytes, toRead);
+                    */
+                    int read;
+                    if (async)
+                    {
+                        AwaitableSocket.SetBuffer(Buffer, _filledBytes, toRead);
+                        await AwaitableSocket.ReceiveAsync();
+                        read = AwaitableSocket.BytesTransferred;
+                    } else
+                        read = Underlying.Read(Buffer, _filledBytes, toRead);
+
                     if (read == 0)
                         throw new EndOfStreamException();
                     count -= read;
