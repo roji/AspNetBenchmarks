@@ -51,6 +51,9 @@ namespace Npgsql
     /// </summary>
     sealed partial class NpgsqlConnector : IDisposable
     {
+        [CanBeNull]
+        internal List<NpgsqlStatement> CrappyCachedStatements { get; set; }
+
         #region Fields and Properties
 
         /// <summary>

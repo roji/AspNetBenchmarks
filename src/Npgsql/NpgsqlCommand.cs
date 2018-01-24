@@ -69,7 +69,7 @@ namespace Npgsql
         int? _timeout;
         readonly NpgsqlParameterCollection _parameters;
 
-        readonly List<NpgsqlStatement> _statements;
+        List<NpgsqlStatement> _statements;
 
         /// <summary>
         /// Returns details about each statement that this command has executed.
@@ -576,6 +576,18 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
         Task Prepare(bool async)
         {
             var connector = CheckReadyAndGetConnector();
+
+            Log.Debug($"Preparing: {CommandText}", connector.Id);
+
+            // REALLY BAD HACK AHEAD
+            //if (connector.PreparedStatementManager.CommandsBySql.TryGetValue(CommandText, out var statements))
+            if (connector.CrappyCachedStatements != null)
+            {
+                _statements = connector.CrappyCachedStatements;
+                _connectorPreparedOn = connector;
+                return PGUtil.CompletedTask;
+            }
+
             for (var i = 0; i < Parameters.Count; i++)
                 if (!Parameters[i].IsTypeExplicitlySet)
                     throw new InvalidOperationException(
@@ -654,6 +666,11 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                 else
                     sendTask.GetAwaiter().GetResult();
             }
+
+            // We've completed preparing. Now cache the entire set of statements for when the same CommandText is used.
+            // TODO: Eject by LRU
+            //connector.PreparedStatementManager.CommandsBySql[CommandText] = _statements;
+            connector.CrappyCachedStatements = _statements;
         }
 
         /// <summary>
