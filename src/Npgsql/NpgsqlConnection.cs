@@ -171,13 +171,22 @@ namespace Npgsql
 
         void GetPoolAndSettings()
         {
+            /*
             var pools = PoolManager.Pools;
+
             if (pools.TryGetValue(_connectionString, out _pool))
             {
                 Settings = _pool.Settings;  // Great, we already have a pool
                 return;
+            }*/
+
+            if (PoolManager.HackedPool != null)
+            {
+                _pool = PoolManager.HackedPool;
+                Settings = _pool.Settings;
+                return;
             }
-                
+
             // Connection string hasn't been seen before. Parse it.
             Settings = new NpgsqlConnectionStringBuilder(_connectionString);
 
@@ -192,12 +201,16 @@ namespace Npgsql
             {
                 return;
             }
-            
+
             // Connstring may be equivalent to one that has already been seen though (e.g. different
             // ordering). Have NpgsqlConnectionStringBuilder produce a canonical string representation
             // and recheck.
             var canonical = Settings.ConnectionString;
 
+            Interlocked.CompareExchange(ref PoolManager.HackedPool, new ConnectorPool(Settings, canonical), null);
+            _pool = PoolManager.HackedPool;
+
+            /*
             if (pools.TryGetValue(canonical, out _pool))
             {
                 _pool = pools.GetOrAdd(_connectionString, _pool); // Assign the connection string the canonical pool. If someone beat us to it use whatever is there already.
@@ -218,6 +231,7 @@ namespace Npgsql
             }
             
             _pool = pools.GetOrAdd(_connectionString, _pool);
+            */
         }
 
         async Task Open(bool async, CancellationToken cancellationToken)

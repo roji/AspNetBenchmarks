@@ -13,6 +13,8 @@ namespace Npgsql
 {
     static class PoolManager
     {
+        [CanBeNull] internal static ConnectorPool HackedPool;
+
         /// <summary>
         /// Holds connector pools indexed by their connection strings.
         /// </summary>
