@@ -177,6 +177,18 @@ namespace Npgsql
             _columns.Add((Buffer.ReadPosition, len));
         }
 
+        public override int GetInt32(int ordinal)
+        {
+            SeekToColumn(ordinal);
+            return Buffer.ReadInt32();
+        }
+
+        public override string GetString(int ordinal)
+        {
+            SeekToColumn(ordinal);
+            return Buffer.ReadString(ColumnLen);
+        }
+
         // We know the entire row is buffered in memory (non-sequential reader), so no I/O will be performed
         public override Task<T> GetFieldValueAsync<T>(int column, CancellationToken cancellationToken)
             => Task.FromResult(GetFieldValue<T>(column));
