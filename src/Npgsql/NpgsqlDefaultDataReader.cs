@@ -25,6 +25,9 @@ namespace Npgsql
         /// The number of columns in the current row
         /// </summary>
         int _column;
+
+        int _dataMsgEnd;
+
         readonly List<(int Offset, int Length)> _columns = new List<(int Offset, int Length)>();
 
         /// <summary>
@@ -140,9 +143,7 @@ namespace Npgsql
         internal override Task ConsumeRow(bool async)
         {
             Debug.Assert(State == ReaderState.InResult || State == ReaderState.BeforeResult);
-            SeekToColumn(RowDescription.NumFields-1);
-            if (ColumnLen != -1)
-                Buffer.ReadPosition += ColumnLen;
+            Buffer.ReadPosition = _dataMsgEnd;
             if (_streams != null)
             {
                 foreach (var stream in _streams)
@@ -159,6 +160,7 @@ namespace Npgsql
             // reading in non-sequential mode, a new oversize buffer is allocated. We thus have to
             // recapture the connector's buffer on each new DataRow.
             Buffer = Connector.ReadBuffer;
+            _dataMsgEnd = Buffer.ReadPosition + dataMsg.Length;
 
             // We currently assume that the row's number of columns is identical to the description's
 #if DEBUG
