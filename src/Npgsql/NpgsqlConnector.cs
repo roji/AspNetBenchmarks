@@ -1005,8 +1005,16 @@ namespace Npgsql
             {
                 if (CurrentReader != null)
                 {
+                    // TODO: This is uncool
+                    // Make sure the send task for this command, which may have executed asynchronously and in
+                    // parallel with the reading, has completed, throwing any exceptions it generated.
+                    if (async)
+                        await CurrentReader._sendTask;
+                    else
+                        CurrentReader._sendTask.GetAwaiter().GetResult();
+
                     // The reader cleanup will call EndUserAction
-                    await CurrentReader.Cleanup(async);
+                    CurrentReader.Cleanup();
                 }
                 else
                 {

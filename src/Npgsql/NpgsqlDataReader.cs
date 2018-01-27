@@ -66,7 +66,7 @@ namespace Npgsql
         /// </summary>
         protected CommandBehavior Behavior;
 
-        Task _sendTask;
+        internal Task _sendTask;
 
         internal ReaderState State;
 
@@ -613,14 +613,15 @@ namespace Npgsql
             }
 
             if (State != ReaderState.Consumed)
-                await Consume(async);
-
-            await Cleanup(async, connectionClosing);
-        }
-
-        internal async Task Cleanup(bool async, bool connectionClosing=false)
-        {
-            Log.Trace("Cleaning up reader", Connector.Id);
+            {
+                // TODO: Copied from Consume(), check factoring
+                // Skip over the other result sets. Note that this does tally records affected
+                // from CommandComplete messages, and properly sets state for auto-prepared statements
+                if (IsSchemaOnly)
+                    while (await NextResultSchemaOnly(async)) {}
+                else
+                    while (await NextResult(async, true)) {}
+            }
 
             // Make sure the send task for this command, which may have executed asynchronously and in
             // parallel with the reading, has completed, throwing any exceptions it generated.
@@ -628,6 +629,13 @@ namespace Npgsql
                 await _sendTask;
             else
                 _sendTask.GetAwaiter().GetResult();
+
+            Cleanup(connectionClosing);
+        }
+
+        internal void Cleanup(bool connectionClosing=false)
+        {
+            Log.Trace("Cleaning up reader", Connector.Id);
 
             State = ReaderState.Closed;
             Command.State = CommandState.Idle;
