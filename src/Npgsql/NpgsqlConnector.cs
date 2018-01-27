@@ -912,7 +912,7 @@ namespace Npgsql
             bool isPrependedMessage = false)
         {
             // First read the responses of any prepended messages.
-            if (!isPrependedMessage && _pendingPrependedResponses > 0)
+            if (_pendingPrependedResponses > 0 && !isPrependedMessage)
             {
                 try
                 {
