@@ -73,7 +73,7 @@ namespace Npgsql
         /// The connector object connected to the backend.
         /// </summary>
         [CanBeNull]
-        internal NpgsqlConnector Connector { get; set; }
+        internal NpgsqlConnector Connector;
 
         /// <summary>
         /// The parsed connection string set by the user
@@ -153,7 +153,7 @@ namespace Npgsql
         /// Opens a database connection with the property settings specified by the
         /// <see cref="ConnectionString">ConnectionString</see>.
         /// </summary>
-        public override void Open() => Open(false, CancellationToken.None).GetAwaiter().GetResult();
+        public override void Open() => OpenFast(false, CancellationToken.None).GetAwaiter().GetResult();
 
         /// <summary>
         /// This is the asynchronous version of <see cref="Open()"/>.
@@ -166,7 +166,7 @@ namespace Npgsql
         public override Task OpenAsync(CancellationToken cancellationToken)
         {
             using (NoSynchronizationContextScope.Enter())
-                return Open(true, cancellationToken);
+                return OpenFast(true, cancellationToken);
         }
 
         void GetPoolAndSettings()
@@ -232,6 +232,36 @@ namespace Npgsql
             
             _pool = pools.GetOrAdd(_connectionString, _pool);
             */
+        }
+
+        Task OpenFast(bool async, CancellationToken cancellationToken)
+        {
+            // This is an optimized path for when a connection can be taken from the pool
+            // with no waiting or I/O
+
+            CheckConnectionClosed();
+
+            Log.Trace("Opening connection...");
+
+            if (_pool == null || Settings.Enlist || !_pool.TryAllocateFast(this, out Connector))
+                return Open(async, cancellationToken);
+
+            _userFacingConnectionString = _pool.UserFacingConnectionString;
+
+            Counters.SoftConnectsPerSecond.Increment();
+
+            // Since this pooled connector was opened, global mappings may have
+            // changed. Bring this up to date if needed.
+            var mapper = Connector.TypeMapper;
+            if (mapper.IsModified ||
+                mapper.ChangeCounter != TypeMapping.GlobalTypeMapper.Instance.ChangeCounter)
+            {
+                mapper.Reset();
+            }
+
+            Log.Debug("Connection opened", Connector.Id);
+            OnStateChange(new StateChangeEventArgs(ConnectionState.Closed, ConnectionState.Open));
+            return PGUtil.CompletedTask;
         }
 
         async Task Open(bool async, CancellationToken cancellationToken)

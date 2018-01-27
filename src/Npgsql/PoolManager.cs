@@ -130,22 +130,26 @@ namespace Npgsql
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ValueTask<NpgsqlConnector> Allocate(NpgsqlConnection conn, NpgsqlTimeout timeout, bool async, CancellationToken cancellationToken)
+        internal bool TryAllocateFast(NpgsqlConnection conn, out NpgsqlConnector connector)
         {
             for (var i = 0; i < FastIdle.Length; i++)
             {
-                var item = FastIdle[i];
+                connector = FastIdle[i];
 
-                if (item != null
-                    && Interlocked.CompareExchange(ref FastIdle[i], null, item) == item)
+                if (connector != null
+                    && Interlocked.CompareExchange(ref FastIdle[i], null, connector) == connector)
                 {
-                    item.Connection = conn;
-                    return new ValueTask<NpgsqlConnector>(item);
+                    connector.Connection = conn;
+                    return true;
                 }
             }
 
-            return CreatePhysicalConnection(conn, timeout, async, cancellationToken);
+            connector = null;
+            return false;
         }
+
+        internal ValueTask<NpgsqlConnector> Allocate(NpgsqlConnection conn, NpgsqlTimeout timeout, bool async, CancellationToken cancellationToken)
+            => CreatePhysicalConnection(conn, timeout, async, cancellationToken);
 
         async ValueTask<NpgsqlConnector> CreatePhysicalConnection(NpgsqlConnection conn, NpgsqlTimeout timeout, bool async, CancellationToken cancellationToken)
         {
