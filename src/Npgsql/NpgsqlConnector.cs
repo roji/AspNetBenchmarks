@@ -904,6 +904,41 @@ namespace Npgsql
             return new ValueTask<IBackendMessage>(ParseServerMessage(ReadBuffer, messageCode, len, false));
         }
 
+        /// <summary>
+        /// Attempts to read a single message, assuming that it exists in its entirety in memory.
+        /// Returns null if the message isn't in memory or some other rarer conditions prevent
+        /// its interpretation (e.g. the existence of prepended messages)
+        /// </summary>
+        /// <returns></returns>
+        [CanBeNull]
+        internal IBackendMessage ReadMessageInMemory()
+        {
+            // TODO: Handle notification messages, prepended?
+            if (_pendingPrependedResponses > 0 || ReadBuffer.ReadBytesLeft < 5)
+                return null;
+
+            var messageCode = (BackendMessageCode)ReadBuffer.ReadByte();
+            switch (messageCode)
+            {
+            case BackendMessageCode.NoticeResponse:
+            case BackendMessageCode.NotificationResponse:
+            case BackendMessageCode.ParameterStatus:
+            case BackendMessageCode.ErrorResponse:
+                ReadBuffer.ReadPosition--;
+                return null;
+            }
+
+            PGUtil.ValidateBackendMessageCode(messageCode);
+            var len = ReadBuffer.ReadInt32() - 4; // Transmitted length includes itself
+            if (len > ReadBuffer.ReadBytesLeft)
+            {
+                ReadBuffer.ReadPosition -= 5;
+                return null;
+            }
+
+            return ParseServerMessage(ReadBuffer, messageCode, len, false);
+        }
+
         [ItemCanBeNull]
         async ValueTask<IBackendMessage> ReadMessageLong(
             bool async,

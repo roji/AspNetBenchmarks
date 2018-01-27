@@ -594,10 +594,10 @@ namespace Npgsql
         /// </summary>
         public Task CloseAsync() => Close(false, true);
 
-        internal async Task Close(bool connectionClosing, bool async)
+        internal Task Close(bool connectionClosing, bool async)
         {
             if (State == ReaderState.Closed)
-                return;
+                return PGUtil.CompletedTask;
 
             switch (Connector.State)
             {
@@ -609,11 +609,12 @@ namespace Npgsql
                 State = ReaderState.Closed;
                 Command.State = CommandState.Idle;
                 ReaderClosed?.Invoke(this, EventArgs.Empty);
-                return;
+                return PGUtil.CompletedTask;
             }
 
             if (State != ReaderState.Consumed)
             {
+                /*
                 // TODO: Copied from Consume(), check factoring
                 // Skip over the other result sets. Note that this does tally records affected
                 // from CommandComplete messages, and properly sets state for auto-prepared statements
@@ -621,14 +622,41 @@ namespace Npgsql
                     while (await NextResultSchemaOnly(async)) {}
                 else
                     while (await NextResult(async, true)) {}
+                    */
+
+                // TODO: The following is bad because it doesn't tally records affected or
+                // set the prepared state of autoprepared statements being prepared.
+                while (true)
+                {
+                    var msg = Connector.ReadMessageInMemory();
+                    if (msg == null)
+                        return CloseLong(connectionClosing, async);
+                    if (msg.Code == BackendMessageCode.ReadyForQuery)
+                        break;
+                }
             }
 
             // Make sure the send task for this command, which may have executed asynchronously and in
             // parallel with the reading, has completed, throwing any exceptions it generated.
+            /*
             if (async)
                 await _sendTask;
             else
                 _sendTask.GetAwaiter().GetResult();
+                */
+
+            Cleanup(connectionClosing);
+            return PGUtil.CompletedTask;
+        }
+
+        async Task CloseLong(bool connectionClosing, bool async)
+        {
+            // Skip over the other result sets. Note that this does tally records affected
+            // from CommandComplete messages, and properly sets state for auto-prepared statements
+            if (IsSchemaOnly)
+                while (await NextResultSchemaOnly(async)) {}
+            else
+                while (await NextResult(async, true)) {}
 
             Cleanup(connectionClosing);
         }
