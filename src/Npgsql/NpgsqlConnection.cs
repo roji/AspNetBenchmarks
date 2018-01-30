@@ -253,9 +253,12 @@ namespace Npgsql
                 mapper.Reset();
 
             Log.Debug("Connection opened", Connector.Id);
-            OnStateChange(new StateChangeEventArgs(ConnectionState.Closed, ConnectionState.Open));
+            OnStateChange(ClosedToOpen);
             return PGUtil.CompletedTask;
         }
+
+        static readonly StateChangeEventArgs ClosedToOpen = new StateChangeEventArgs(ConnectionState.Closed, ConnectionState.Open);
+        static readonly StateChangeEventArgs OpenToClosed = new StateChangeEventArgs(ConnectionState.Open, ConnectionState.Closed);
 
         async Task Open(bool async, CancellationToken cancellationToken)
         {
@@ -642,7 +645,7 @@ namespace Npgsql
 
             Connector = null;
 
-            OnStateChange(new StateChangeEventArgs(ConnectionState.Open, ConnectionState.Closed));
+            OnStateChange(OpenToClosed);
         }
 
         /// <summary>
