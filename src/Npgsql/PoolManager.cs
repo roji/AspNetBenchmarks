@@ -132,7 +132,21 @@ namespace Npgsql
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool TryAllocateFast(NpgsqlConnection conn, out NpgsqlConnector connector)
         {
-            for (var i = 0; i < FastIdle.Length; i++)
+            var len = FastIdle.Length;
+            var start = Thread.CurrentThread.ManagedThreadId % len;
+            for (var i = start; i < len; i++)
+            {
+                connector = FastIdle[i];
+
+                if (connector != null
+                    && Interlocked.CompareExchange(ref FastIdle[i], null, connector) == connector)
+                {
+                    connector.Connection = conn;
+                    return true;
+                }
+            }
+
+            for (var i = 0; i < start; i++)
             {
                 connector = FastIdle[i];
 
