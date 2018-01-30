@@ -212,12 +212,14 @@ namespace Npgsql
 
         readonly Timer _keepAliveTimer;
 
+        /*
         /// <summary>
         /// The command currently being executed by the connector, null otherwise.
         /// Used only for concurrent use error reporting purposes.
         /// </summary>
         [CanBeNull]
         NpgsqlCommand _currentCommand;
+        */
 
         /// <summary>
         /// If pooled, the timestamp when this connector was returned to the pool.
@@ -1507,7 +1509,7 @@ namespace Npgsql
             Connection = null;
             BackendParams.Clear();
             ServerVersion = null;
-            _currentCommand = null;
+            //_currentCommand = null;
 
             _userLock.Dispose();
             _userLock = null;
@@ -1648,6 +1650,9 @@ namespace Npgsql
 
         internal UserAction StartUserAction(ConnectorState newState=ConnectorState.Executing, NpgsqlCommand command=null)
         {
+            return new UserAction(this);
+
+            /*
             lock (this)
             {
                 if (!_userLock.Wait(0))
@@ -1694,10 +1699,12 @@ namespace Npgsql
                     throw;
                 }
             }
+            */
         }
 
         internal void EndUserAction()
         {
+            /*
             Debug.Assert(CurrentReader == null);
 
             lock (this)
@@ -1716,6 +1723,7 @@ namespace Npgsql
                 _userLock.Release();
                 State = ConnectorState.Ready;
             }
+            */
         }
 
         bool IsInUserAction => _userLock.CurrentCount == 0;
