@@ -1130,7 +1130,7 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
 
             _behavior = behavior;
 
-            using (NoSynchronizationContextScope.Enter())
+            //using (NoSynchronizationContextScope.Enter())
             {
                 var reader = ExecuteDbDataReader(behavior, true, cancellationToken);
                 return reader.NextResultAsync(cancellationToken).ContinueWith((t, c) =>

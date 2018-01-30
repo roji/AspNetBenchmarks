@@ -161,7 +161,7 @@ namespace Npgsql
         /// <returns>A task representing the asynchronous operation.</returns>
         public override Task OpenAsync(CancellationToken cancellationToken)
         {
-            using (NoSynchronizationContextScope.Enter())
+            //using (NoSynchronizationContextScope.Enter())
                 return OpenFast(true, cancellationToken);
         }
 
