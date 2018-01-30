@@ -970,7 +970,37 @@ namespace Npgsql
 
                 while (true)
                 {
-                    await ReadBuffer.Ensure(5, async, readingNotifications);
+                    try
+                    {
+                        #region Inlined from NpgsqlReadBuffer.EnsureLong
+
+                        var count = 5 - ReadBuffer.ReadBytesLeft;
+                        if (count > 0)
+                        {
+                            if (ReadBuffer.ReadPosition == ReadBuffer._filledBytes)
+                                ReadBuffer.Clear();
+
+                            while (count > 0)
+                            {
+                                var toRead = ReadBuffer.Size - ReadBuffer._filledBytes;
+                                var read = async
+                                    ? await _stream.ReadAsync(ReadBuffer.Buffer, ReadBuffer._filledBytes, toRead)
+                                    : _stream.Read(ReadBuffer.Buffer, ReadBuffer._filledBytes, toRead);
+                                if (read == 0)
+                                    throw new EndOfStreamException();
+                                count -= read;
+                                ReadBuffer._filledBytes += read;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Break();
+                        throw new NpgsqlException("Exception while reading from stream", e);
+                    }
+
+                    #endregion Inlined from NpgsqlReadBuffer.EnsureLong
+
                     var messageCode = (BackendMessageCode)ReadBuffer.ReadByte();
                     PGUtil.ValidateBackendMessageCode(messageCode);
                     var len = ReadBuffer.ReadInt32() - 4; // Transmitted length includes itself

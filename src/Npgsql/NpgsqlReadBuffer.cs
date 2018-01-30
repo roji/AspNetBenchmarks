@@ -62,7 +62,7 @@ namespace Npgsql
         internal int ReadBytesLeft => _filledBytes - ReadPosition;
 
         internal byte[] Buffer { get; }
-        int _filledBytes;
+        internal int _filledBytes;
         readonly Decoder _textDecoder;
 
         readonly byte[] _workspace;
