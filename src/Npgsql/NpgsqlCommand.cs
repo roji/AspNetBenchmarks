@@ -339,7 +339,8 @@ namespace Npgsql
                 var newState = (int)value;
                 if (newState == _state)
                     return;
-                Interlocked.Exchange(ref _state, newState);
+                _state = newState;
+                //Interlocked.Exchange(ref _state, newState);
             }
         }
 
