@@ -69,6 +69,7 @@ namespace Npgsql
         int? _timeout;
         readonly NpgsqlParameterCollection _parameters;
 
+        [CanBeNull]
         List<NpgsqlStatement> _statements;
 
         /// <summary>
@@ -124,7 +125,6 @@ namespace Npgsql
         public NpgsqlCommand(string cmdText, [CanBeNull] NpgsqlConnection connection, [CanBeNull] NpgsqlTransaction transaction)
         {
             GC.SuppressFinalize(this);
-            _statements = new List<NpgsqlStatement>(1);
             _parameters = new NpgsqlParameterCollection();
             _commandText = cmdText;
             Connection = connection;
@@ -706,6 +706,9 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
 
         void ProcessRawQuery(bool deriveParameters = false)
         {
+            if (_statements == null)
+                _statements = new List<NpgsqlStatement>();
+
             NpgsqlStatement statement;
             switch (CommandType) {
             case CommandType.Text:
@@ -1209,7 +1212,7 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                     Task sendTask;
 
                     // If a cancellation is in progress, wait for it to "complete" before proceeding (#615)
-                    lock (connector.CancelLock) { }
+                    //lock (connector.CancelLock) { }
 
                     connector.UserTimeout = CommandTimeout * 1000;
 
@@ -1400,6 +1403,7 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
             return clone;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         NpgsqlConnector CheckReadyAndGetConnector()
         {
             if (State == CommandState.Disposed)

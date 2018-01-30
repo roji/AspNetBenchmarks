@@ -30,6 +30,7 @@ using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -41,7 +42,6 @@ using Npgsql.TypeMapping;
 using NpgsqlTypes;
 using System.Transactions;
 using IsolationLevel = System.Data.IsolationLevel;
-using ThreadState = System.Threading.ThreadState;
 
 namespace Npgsql
 {
@@ -143,10 +143,6 @@ namespace Npgsql
         {
             GC.SuppressFinalize(this);
             ConnectionString = connectionString;
-
-            // Fix authentication problems. See https://bugzilla.novell.com/show_bug.cgi?id=MONO77559 and
-            // http://pgfoundry.org/forum/message.php?msg_id=1002377 for more info.
-            RSACryptoServiceProvider.UseMachineKeyStore = true;
         }
 
         /// <summary>
@@ -1210,6 +1206,7 @@ namespace Npgsql
 
         #region State checks
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void CheckConnectionOpen()
         {
             CheckDisposed();
@@ -1217,6 +1214,7 @@ namespace Npgsql
                 throw new InvalidOperationException("Connection is not open");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void CheckConnectionClosed()
         {
             CheckDisposed();
@@ -1224,12 +1222,14 @@ namespace Npgsql
                 throw new InvalidOperationException("Connection already open");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void CheckDisposed()
         {
             if (_disposed)
                 throw new ObjectDisposedException(typeof(NpgsqlConnection).Name);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal NpgsqlConnector CheckReadyAndGetConnector()
         {
             CheckDisposed();
