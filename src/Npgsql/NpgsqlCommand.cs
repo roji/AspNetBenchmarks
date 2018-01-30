@@ -1126,7 +1126,7 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
         /// <returns></returns>
         protected override Task<DbDataReader> ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            //cancellationToken.ThrowIfCancellationRequested();
 
             _behavior = behavior;
 
@@ -1184,7 +1184,7 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
             connector.StartUserAction(this);
             try
             {
-                using (cancellationToken.Register(cmd => ((NpgsqlCommand)cmd).Cancel(), this))
+                //using (cancellationToken.Register(cmd => ((NpgsqlCommand)cmd).Cancel(), this))
                 {
                     ValidateParameters();
                     if ((behavior & CommandBehavior.SequentialAccess) != 0 && Parameters.HasOutputParameters)
