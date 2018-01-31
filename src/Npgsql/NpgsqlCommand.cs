@@ -326,22 +326,10 @@ namespace Npgsql
 
         #region State management
 
-        int _state;
-
         /// <summary>
         /// Gets the current state of the connector
         /// </summary>
-        internal CommandState State
-        {
-            private get { return (CommandState)_state; }
-            set
-            {
-                var newState = (int)value;
-                if (newState == _state)
-                    return;
-                Interlocked.Exchange(ref _state, newState);
-            }
-        }
+        internal CommandState State { get; set; }
 
         void ResetExplicitPreparation() => _connectorPreparedOn = null;
 

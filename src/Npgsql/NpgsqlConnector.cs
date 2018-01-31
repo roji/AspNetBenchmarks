@@ -346,47 +346,10 @@ namespace Npgsql
 
         #region State management
 
-        int _state;
-
         /// <summary>
         /// Gets the current state of the connector
         /// </summary>
-        internal ConnectorState State
-        {
-            get => (ConnectorState)_state;
-            set
-            {
-                var newState = (int)value;
-                if (newState == _state)
-                    return;
-                Interlocked.Exchange(ref _state, newState);
-            }
-        }
-
-        /// <summary>
-        /// Returns whether the connector is open, regardless of any task it is currently performing
-        /// </summary>
-        bool IsConnected
-        {
-            get
-            {
-                switch (State)
-                {
-                    case ConnectorState.Ready:
-                    case ConnectorState.Executing:
-                    case ConnectorState.Fetching:
-                    case ConnectorState.Waiting:
-                    case ConnectorState.Copy:
-                        return true;
-                    case ConnectorState.Closed:
-                    case ConnectorState.Connecting:
-                    case ConnectorState.Broken:
-                        return false;
-                    default:
-                        throw new ArgumentOutOfRangeException("Unknown state: " + State);
-                }
-            }
-        }
+        internal ConnectorState State { get; set; }
 
         internal bool IsReady => State == ConnectorState.Ready;
         internal bool IsClosed => State == ConnectorState.Closed;
