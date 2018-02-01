@@ -72,6 +72,8 @@ namespace Npgsql
         [CanBeNull]
         List<NpgsqlStatement> _statements;
 
+        [CanBeNull] byte[] _cachedWriteBuffer;
+
         /// <summary>
         /// Returns details about each statement that this command has executed.
         /// Is only populated when an Execute* method is called.
@@ -572,6 +574,7 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
             if (connector.CrappyCachedStatements != null)
             {
                 _statements = connector.CrappyCachedStatements;
+                _cachedWriteBuffer = connector.CrappyCachedWriteBuffer;
                 _connectorPreparedOn = connector;
                 return PGUtil.CompletedTask;
             }
@@ -659,6 +662,43 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
             // TODO: Eject by LRU
             //connector.PreparedStatementManager.CommandsBySql[CommandText] = _statements;
             connector.CrappyCachedStatements = _statements;
+            connector.CrappyCachedWriteBuffer = PrepareSerializedCommand();
+        }
+
+        byte[] PrepareSerializedCommand()
+        {
+            var connector = Connection.Connector;
+            Debug.Assert(connector != null);
+
+            Task task;
+            // TODO: Leave space for prepended commands
+            var buf = connector.WriteBuffer;
+            Debug.Assert(buf.WritePosition == 0);
+            for (var i = 0; i < _statements.Count; i++)
+            {
+                var statement = _statements[i];
+
+                var bind = connector.BindMessage;
+                bind.Populate(statement.InputParameters, "", statement.StatementName);
+                if (AllResultTypesAreUnknown)
+                    bind.AllResultTypesAreUnknown = AllResultTypesAreUnknown;
+                else if (i == 0 && UnknownResultTypeList != null)
+                    bind.UnknownResultTypeList = UnknownResultTypeList;
+
+                // TODO: The below assumes messages fit, otherwise a flush will occur which is bad.
+                // We need a way to TryWrite a Bind message into a buffer, this will be usable for
+                // this path as well as a fast non-async path
+                task = connector.BindMessage.Write(buf, false);
+                Debug.Assert(task.IsCompleted, "Bind doesn't fit");
+                task = ExecuteMessage.DefaultExecute.Write(buf, false);
+                Debug.Assert(task.IsCompleted, "Execute doesn't fit");
+            }
+            task = SyncMessage.Instance.Write(buf, false);
+            Debug.Assert(task.IsCompleted, "Sync doesn't fit");
+
+            var serializedCmdBuffer = buf.GetContents();
+            buf.Clear();
+            return serializedCmdBuffer;
         }
 
         /// <summary>
@@ -1202,7 +1242,7 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                     // If a cancellation is in progress, wait for it to "complete" before proceeding (#615)
                     //lock (connector.CancelLock) { }
 
-                    connector.UserTimeout = CommandTimeout * 1000;
+                    //connector.UserTimeout = CommandTimeout * 1000;
 
                     if ((behavior & CommandBehavior.SchemaOnly) == 0)
                     {
@@ -1221,17 +1261,27 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                             _connectorPreparedOn = connector;
                         }
 
-                        // We do not wait for the entire send to complete before proceeding to reading -
-                        // the sending continues in parallel with the user's reading. Waiting for the
-                        // entire send to complete would trigger a deadlock for multistatement commands,
-                        // where PostgreSQL sends large results for the first statement, while we're sending large
-                        // parameter data for the second. See #641.
-                        // Instead, all sends for non-first statements and for non-first buffers are performed
-                        // asynchronously (even if the user requested sync), in a special synchronization context
-                        // to prevents a dependency on the thread pool (which would also trigger deadlocks).
-                        // The WriteBuffer notifies this command when the first buffer flush occurs, so that the
-                        // send functions can switch to the special async mode when needed.
-                        sendTask = SendExecute(async);
+                        var crappyBuffer = connector.CrappyCachedWriteBuffer;
+                        if (crappyBuffer != null)
+                        {
+                            connector.WriteBuffer.DirectWrite(crappyBuffer, 0, crappyBuffer.Length);
+                            sendTask = PGUtil.CompletedTask;
+                        }
+                        else
+                        {
+
+                            // We do not wait for the entire send to complete before proceeding to reading -
+                            // the sending continues in parallel with the user's reading. Waiting for the
+                            // entire send to complete would trigger a deadlock for multistatement commands,
+                            // where PostgreSQL sends large results for the first statement, while we're sending large
+                            // parameter data for the second. See #641.
+                            // Instead, all sends for non-first statements and for non-first buffers are performed
+                            // asynchronously (even if the user requested sync), in a special synchronization context
+                            // to prevents a dependency on the thread pool (which would also trigger deadlocks).
+                            // The WriteBuffer notifies this command when the first buffer flush occurs, so that the
+                            // send functions can switch to the special async mode when needed.
+                            sendTask = SendExecute(async);
+                        }
                     }
                     else
                     {

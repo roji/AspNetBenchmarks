@@ -54,6 +54,8 @@ namespace Npgsql
     {
         [CanBeNull]
         internal List<NpgsqlStatement> CrappyCachedStatements { get; set; }
+        [CanBeNull]
+        internal byte[] CrappyCachedWriteBuffer { get; set; }
 
         #region Fields and Properties
 
