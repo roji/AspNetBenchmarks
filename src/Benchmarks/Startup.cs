@@ -252,6 +252,11 @@ namespace Benchmarks
                 app.UseFortunesRaw();
             }
 
+            if (Scenarios.DbFortunesRawSync)
+            {
+                app.UseFortunesRawSync();
+            }
+
             if (Scenarios.DbFortunesDapper)
             {
                 app.UseFortunesDapper();
