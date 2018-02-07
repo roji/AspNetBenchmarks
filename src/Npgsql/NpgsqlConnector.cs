@@ -950,9 +950,15 @@ namespace Npgsql
                             while (count > 0)
                             {
                                 var toRead = ReadBuffer.Size - ReadBuffer._filledBytes;
-                                var read = async
-                                    ? await _stream.ReadAsync(ReadBuffer.Buffer, ReadBuffer._filledBytes, toRead)
-                                    : _stream.Read(ReadBuffer.Buffer, ReadBuffer._filledBytes, toRead);
+                                int read;
+                                if (async)
+                                {
+                                    _awaitableSocket.SetBuffer(ReadBuffer.Buffer, ReadBuffer._filledBytes, toRead);
+                                    await _awaitableSocket.ReceiveAsync();
+                                    read = _awaitableSocket.BytesTransferred;
+                                } else
+                                    read = _stream.Read(ReadBuffer.Buffer, ReadBuffer._filledBytes, toRead);
+
                                 if (read == 0)
                                     throw new EndOfStreamException();
                                 count -= read;
