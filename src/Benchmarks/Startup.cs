@@ -59,7 +59,7 @@ namespace Benchmarks
             switch (appSettings.Database)
             {
                 case DatabaseServer.PostgreSql:
-                    services.AddDbContextPool<ApplicationDbContext>(options => options.UseNpgsql(appSettings.ConnectionString));
+                    //services.AddDbContextPool<ApplicationDbContext>(options => options.UseNpgsql(appSettings.ConnectionString));
 
                     if (Scenarios.Any("Raw") || Scenarios.Any("Dapper"))
                     {
