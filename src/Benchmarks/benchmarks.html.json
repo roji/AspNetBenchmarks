@@ -5,8 +5,8 @@
     "PresetHeaders": "Html",
 
     "Source": {
-      "Repository": "https://github.com/aspnet/benchmarks.git",
-      "BranchOrCommit": "master",
+      "Repository": "https://github.com/roji/benchmarks.git",
+      "BranchOrCommit": "Multiplexing",
       "Project": "src/Benchmarks/Benchmarks.csproj"
     },
     "ReadyStateText": "Application started."

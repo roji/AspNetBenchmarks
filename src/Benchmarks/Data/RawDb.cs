@@ -147,7 +147,8 @@ namespace Benchmarks.Data
                 db.ConnectionString = _connectionString;
                 await db.OpenAsync();
 
-                using (var rdr = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection))
+                using (var rdr = await cmd.ExecuteReaderAsync())
+                //using (var rdr = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection))
                 {
                     while (await rdr.ReadAsync())
                     {
@@ -179,9 +180,10 @@ namespace Benchmarks.Data
                 db.Open();
 
                 // Prepared statements improve PostgreSQL performance by 10-15%
-                cmd.Prepare();
+                //cmd.Prepare();
 
-                using (var rdr = cmd.ExecuteReader(CommandBehavior.CloseConnection))
+                //using (var rdr = cmd.ExecuteReader(CommandBehavior.CloseConnection))
+                using (var rdr = cmd.ExecuteReader())
                 {
                     while (rdr.Read())
                     {
