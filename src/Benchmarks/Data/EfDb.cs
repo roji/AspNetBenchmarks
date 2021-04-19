@@ -8,20 +8,62 @@ using System.Threading;
 using System.Threading.Tasks;
 using Benchmarks.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
 
 namespace Benchmarks.Data
 {
     public class EfDb : IDb
     {
+        private static DbContextPool<ApplicationDbContext> _contextPool;
+
+        static EfDb()
+        {
+            Console.Error.WriteLine("Starting static constructor: " + Startup.ConnectionString);
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+
+                optionsBuilder
+                    .UseNpgsql(Startup.ConnectionString
+#if NET5_0_OR_GREATER
+                    , o => o.ExecutionStrategy(d => new NonRetryingExecutionStrategy(d))
+#endif
+                    )
+#if NET6_0_OR_GREATER
+                            .DisableConcurrencyDetection()
+#endif
+                    ;
+
+                var extension = (optionsBuilder.Options.FindExtension<CoreOptionsExtension>() ?? new CoreOptionsExtension())
+                    .WithMaxPoolSize(1024);
+
+                ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
+
+                var options = optionsBuilder.Options;
+                _contextPool = new DbContextPool<ApplicationDbContext>(options);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Crash: " + e);
+                Environment.Exit(1);
+            }
+        }
+
         private readonly IRandom _random;
         private readonly ApplicationDbContext _dbContext;
 
-        public EfDb(IRandom random, ApplicationDbContext dbContext, IOptions<AppSettings> appSettings)
+        // public EfDb(IRandom random, ApplicationDbContext dbContext, IOptions<AppSettings> appSettings)
+        // {
+        //     _random = random;
+        //     _dbContext = dbContext;
+        // }
+
+        public EfDb()
         {
-            _random = random;
-            _dbContext = dbContext;
         }
 
         private static readonly Func<ApplicationDbContext, int, Task<World>> _firstWorldQuery
@@ -93,10 +135,19 @@ namespace Benchmarks.Data
         {
             var result = new List<Fortune>();
 
-            await foreach (var fortune in _fortunesQuery(_dbContext))
+            var lease = new DbContextLease(_contextPool, standalone: true);
+            var dbContext = (ApplicationDbContext)lease.Context;
+
+            // using (var dbContext = (ApplicationDbContext)poolable)
+
+            // var dbContext = _dbContext;
+
+            await foreach (var fortune in _fortunesQuery(dbContext))
             {
                 result.Add(fortune);
             }
+
+            lease.Release();
 
             result.Add(new Fortune { Message = "Additional fortune added at request time." });
             
