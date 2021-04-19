@@ -50,6 +50,8 @@ namespace Benchmarks
 
         public Scenarios Scenarios { get; }
 
+        public static string ConnectionString { get; private set; }
+
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<AppSettings>(Configuration);
@@ -77,6 +79,8 @@ namespace Benchmarks
                         throw new ArgumentException("No Reset On Close=true must be specified for Npgsql");
                     if (settings.Enlist)
                         throw new ArgumentException("Enlist=false must be specified for Npgsql");
+
+                    ConnectionString = appSettings.ConnectionString;
 
                     services.AddDbContextPool<ApplicationDbContext>(
                         options => options
