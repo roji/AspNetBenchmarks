@@ -8,13 +8,45 @@ using System.Threading;
 using System.Threading.Tasks;
 using Benchmarks.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
 
 namespace Benchmarks.Data
 {
     public class EfDb : IDb
     {
+        private static DbContextPool<ApplicationDbContext> _contextPool;
+
+        static EfDb()
+        {
+            Console.Error.WriteLine("Starting static constructor: " + Startup.ConnectionString);
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+
+                optionsBuilder
+                    .UseNpgsql(Startup.ConnectionString
+#if NET5_0_OR_GREATER
+                    , o => o.ExecutionStrategy(d => new NonRetryingExecutionStrategy(d))
+#endif
+                    )
+#if NET6_0_OR_GREATER
+                            .DisableConcurrencyDetection()
+#endif
+                    ;
+
+                var options = optionsBuilder.Options;
+                _contextPool = new DbContextPool<ApplicationDbContext>(options);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Crash: " + e);
+                Environment.Exit(1);
+            }
+        }
+
         private readonly IRandom _random;
         private readonly ApplicationDbContext _dbContext;
 
@@ -23,6 +55,10 @@ namespace Benchmarks.Data
             _random = random;
             _dbContext = dbContext;
         }
+
+        // public EfDb()
+        // {
+        // }
 
         private static readonly Func<ApplicationDbContext, int, Task<World>> _firstWorldQuery
             = EF.CompileAsyncQuery((ApplicationDbContext context, int id)
@@ -91,12 +127,22 @@ namespace Benchmarks.Data
 
         public async Task<IEnumerable<Fortune>> LoadFortunesRows()
         {
+            var poolable = _contextPool.Rent();
+            // poolable.SetLease(new DbContextLease(_contextPool, standalone: true));
+
+            // using var dbContext = (ApplicationDbContext)poolable;
+            var dbContext = (ApplicationDbContext)poolable;
+
+            // var dbContext = _dbContext;
+
             var result = new List<Fortune>();
 
-            await foreach (var fortune in _fortunesQuery(_dbContext))
+            await foreach (var fortune in _fortunesQuery(dbContext))
             {
                 result.Add(fortune);
             }
+
+            _contextPool.Return(poolable);
 
             result.Add(new Fortune { Message = "Additional fortune added at request time." });
             
