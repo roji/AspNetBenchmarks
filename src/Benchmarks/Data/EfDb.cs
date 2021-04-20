@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Benchmarks.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -37,6 +38,11 @@ namespace Benchmarks.Data
 #endif
                     ;
 
+                var extension = (optionsBuilder.Options.FindExtension<CoreOptionsExtension>() ?? new CoreOptionsExtension())
+                    .WithMaxPoolSize(1024);
+
+                ((IDbContextOptionsBuilderInfrastructure)optionsBuilder).AddOrUpdateExtension(extension);
+
                 var options = optionsBuilder.Options;
                 _contextPool = new DbContextPool<ApplicationDbContext>(options);
             }
@@ -50,15 +56,15 @@ namespace Benchmarks.Data
         private readonly IRandom _random;
         private readonly ApplicationDbContext _dbContext;
 
-        public EfDb(IRandom random, ApplicationDbContext dbContext, IOptions<AppSettings> appSettings)
-        {
-            _random = random;
-            _dbContext = dbContext;
-        }
-
-        // public EfDb()
+        // public EfDb(IRandom random, ApplicationDbContext dbContext, IOptions<AppSettings> appSettings)
         // {
+        //     _random = random;
+        //     _dbContext = dbContext;
         // }
+
+        public EfDb()
+        {
+        }
 
         private static readonly Func<ApplicationDbContext, int, Task<World>> _firstWorldQuery
             = EF.CompileAsyncQuery((ApplicationDbContext context, int id)
@@ -127,22 +133,21 @@ namespace Benchmarks.Data
 
         public async Task<IEnumerable<Fortune>> LoadFortunesRows()
         {
-            var poolable = _contextPool.Rent();
-            // poolable.SetLease(new DbContextLease(_contextPool, standalone: true));
+            var result = new List<Fortune>();
 
-            // using var dbContext = (ApplicationDbContext)poolable;
-            var dbContext = (ApplicationDbContext)poolable;
+            var lease = new DbContextLease(_contextPool, standalone: true);
+            var dbContext = (ApplicationDbContext)lease.Context;
+
+            // using (var dbContext = (ApplicationDbContext)poolable)
 
             // var dbContext = _dbContext;
-
-            var result = new List<Fortune>();
 
             await foreach (var fortune in _fortunesQuery(dbContext))
             {
                 result.Add(fortune);
             }
 
-            _contextPool.Return(poolable);
+            lease.Release();
 
             result.Add(new Fortune { Message = "Additional fortune added at request time." });
             

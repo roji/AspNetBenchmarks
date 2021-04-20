@@ -11,6 +11,8 @@ namespace Benchmarks.Controllers
     [Route("mvc/fortunes")]
     public class FortunesController : Controller
     {
+        private static EfDb _efDb = new EfDb();
+
         [HttpGet("raw")]
         public async Task<IActionResult> Raw()
         {
@@ -35,7 +37,9 @@ namespace Benchmarks.Controllers
         [HttpGet("ef")]
         public async Task<IActionResult> Ef()
         {
-            var db = HttpContext.RequestServices.GetRequiredService<EfDb>();
+            // var db = HttpContext.RequestServices.GetRequiredService<EfDb>();
+            var db = _efDb;
+
             return View("Fortunes", await db.LoadFortunesRows());
         }
     }
