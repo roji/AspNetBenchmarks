@@ -19,6 +19,7 @@ namespace Benchmarks.Data
     public class EfDb : IDb
     {
         private static DbContextPool<ApplicationDbContext> _contextPool;
+        private static PooledDbContextFactory<ApplicationDbContext> _dbContextFactory;
 
         static EfDb()
         {
@@ -45,6 +46,7 @@ namespace Benchmarks.Data
 
                 var options = optionsBuilder.Options;
                 _contextPool = new DbContextPool<ApplicationDbContext>(options);
+                _dbContextFactory = new PooledDbContextFactory<ApplicationDbContext>(_contextPool);
             }
             catch (Exception e)
             {
@@ -61,10 +63,6 @@ namespace Benchmarks.Data
         //     _random = random;
         //     _dbContext = dbContext;
         // }
-
-        public EfDb()
-        {
-        }
 
         private static readonly Func<ApplicationDbContext, int, Task<World>> _firstWorldQuery
             = EF.CompileAsyncQuery((ApplicationDbContext context, int id)
@@ -135,19 +133,13 @@ namespace Benchmarks.Data
         {
             var result = new List<Fortune>();
 
-            var lease = new DbContextLease(_contextPool, standalone: true);
-            var dbContext = (ApplicationDbContext)lease.Context;
-
-            // using (var dbContext = (ApplicationDbContext)poolable)
-
-            // var dbContext = _dbContext;
-
-            await foreach (var fortune in _fortunesQuery(dbContext))
+            using (var dbContext = _dbContextFactory.CreateDbContext())
             {
-                result.Add(fortune);
+                await foreach (var fortune in _fortunesQuery(dbContext))
+                {
+                    result.Add(fortune);
+                }
             }
-
-            lease.Release();
 
             result.Add(new Fortune { Message = "Additional fortune added at request time." });
             
