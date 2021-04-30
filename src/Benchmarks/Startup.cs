@@ -77,7 +77,7 @@ namespace Benchmarks
                     if (settings.Enlist)
                         throw new ArgumentException("Enlist=false must be specified for Npgsql");
 
-                    services.AddDbContextPool<ApplicationDbContext>(options => options.UseNpgsql(appSettings.ConnectionString), 1024);
+                    services.AddDbContextPool<ApplicationDbContext>(options => options.UseNpgsql(appSettings.ConnectionString));
 
                     if (Scenarios.Any("Raw") || Scenarios.Any("Dapper"))
                     {
