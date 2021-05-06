@@ -84,11 +84,7 @@ namespace Benchmarks
 #if NET5_0_OR_GREATER
                                 , o => o.ExecutionStrategy(d => new NonRetryingExecutionStrategy(d))
 #endif
-                                )
-#if NET6_0_OR_GREATER
-                            .DisableConcurrencyDetection()
-#endif
-                        , 1024);
+                                ), 1024);
 
                     if (Scenarios.Any("Raw") || Scenarios.Any("Dapper"))
                     {
