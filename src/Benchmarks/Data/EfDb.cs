@@ -93,7 +93,8 @@ namespace Benchmarks.Data
         {
             var result = new List<Fortune>();
 
-            await foreach (var fortune in _fortunesQuery(_dbContext))
+            // await foreach (var fortune in _fortunesQuery(_dbContext))
+            await foreach (var fortune in _dbContext.Fortune.AsAsyncEnumerable())
             {
                 result.Add(fortune);
             }
