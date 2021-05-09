@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <!-- For local dev specify all supported TFMs they can be easily tested -->
   <PropertyGroup Condition="'$(BenchmarksTargetFramework)' == ''">
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(BenchmarksTargetFramework)' != ''">
     <TargetFramework>$(BenchmarksTargetFramework)</TargetFramework>
@@ -125,11 +125,13 @@
     <!-- <PackageReference Include="Microsoft.AspNetCore.Server.IntegrationTesting.IIS" Version="$(MicrosoftAspNetCoreAppPackageVersion)" /> -->
     <!-- <PackageReference Include="Microsoft.AspNetCore.Server.IntegrationTesting.IIS" Version="5.0.0-preview.6.20303.1" /> -->
 
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlEntityFrameworkCorePostgreSQLVersion60)" />
-    <PackageReference Include="Npgsql" Version="$(NpgsqlVersion60)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(MicrosoftEntityFrameworkCoreSqlServerVersion60)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftEntityFrameworkCoreSqliteVersion60)" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(MicrosoftEntityFrameworkCoreSqlServerVersion60)" />
 
+    <!--    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlEntityFrameworkCorePostgreSQLVersion60)" />-->
+<!--    <PackageReference Include="Npgsql" Version="$(NpgsqlVersion60)" />-->
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(MicrosoftEntityFrameworkCoreSqlServerVersion60)" />-->
+<!--    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftEntityFrameworkCoreSqliteVersion60)" />-->
+   <PackageReference Include="EntityFramework6.Npgsql" Version="6.4.1" />
   </ItemGroup>
 
   <ItemGroup>

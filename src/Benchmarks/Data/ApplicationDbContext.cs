@@ -1,17 +1,16 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using Microsoft.EntityFrameworkCore;
+using System.Data.Entity;
 
 namespace Benchmarks.Data
 {
     public sealed class ApplicationDbContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions options)
-            : base(options)
+        public ApplicationDbContext(string connectionString)
+            : base(connectionString)
         {
-            ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
-            ChangeTracker.AutoDetectChangesEnabled = false;
+            Configuration.AutoDetectChangesEnabled = false;
         }
 
         public DbSet<World> World { get; set; }
