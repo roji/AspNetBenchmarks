@@ -27,14 +27,14 @@
 
     <MongoDbVersion>2.8.0</MongoDbVersion>
     <DapperVersion>2.0.30</DapperVersion>
-    <NpgsqlVersion>5.0.3</NpgsqlVersion>
+    <NpgsqlVersion>6.0.0-preview3</NpgsqlVersion>
     <NpgsqlVersion60>6.0.0-preview3</NpgsqlVersion60>
     <NpgsqlEntityFrameworkCorePostgreSQLVersion20>2.0.2</NpgsqlEntityFrameworkCorePostgreSQLVersion20>
     <NpgsqlEntityFrameworkCorePostgreSQLVersion21>2.1.2</NpgsqlEntityFrameworkCorePostgreSQLVersion21>
     <NpgsqlEntityFrameworkCorePostgreSQLVersion22>2.2.4</NpgsqlEntityFrameworkCorePostgreSQLVersion22>
     <NpgsqlEntityFrameworkCorePostgreSQLVersion30>3.0.1</NpgsqlEntityFrameworkCorePostgreSQLVersion30>
     <NpgsqlEntityFrameworkCorePostgreSQLVersion31>3.1.11</NpgsqlEntityFrameworkCorePostgreSQLVersion31>
-    <NpgsqlEntityFrameworkCorePostgreSQLVersion50>5.0.2</NpgsqlEntityFrameworkCorePostgreSQLVersion50>
+    <NpgsqlEntityFrameworkCorePostgreSQLVersion50>6.0.0-preview3</NpgsqlEntityFrameworkCorePostgreSQLVersion50>
     <NpgsqlEntityFrameworkCorePostgreSQLVersion60>6.0.0-preview3</NpgsqlEntityFrameworkCorePostgreSQLVersion60>
     <PomeloEntityFrameworkCoreMySqlVersion20>2.0.1</PomeloEntityFrameworkCoreMySqlVersion20>
     <PomeloEntityFrameworkCoreMySqlVersion21>2.1.4</PomeloEntityFrameworkCoreMySqlVersion21>
@@ -43,13 +43,13 @@
     <PomeloEntityFrameworkCoreMySqlVersion31>3.1.1</PomeloEntityFrameworkCoreMySqlVersion31>
     <MicrosoftEntityFrameworkCoreSqlServerVersion30>3.0.3</MicrosoftEntityFrameworkCoreSqlServerVersion30>
     <MicrosoftEntityFrameworkCoreSqlServerVersion31>3.1.13</MicrosoftEntityFrameworkCoreSqlServerVersion31>
-    <MicrosoftEntityFrameworkCoreSqlServerVersion50>5.0.4</MicrosoftEntityFrameworkCoreSqlServerVersion50>
+    <MicrosoftEntityFrameworkCoreSqlServerVersion50>6.0.0-preview.3.21201.2</MicrosoftEntityFrameworkCoreSqlServerVersion50>
     <MicrosoftEntityFrameworkCoreSqlServerVersion60>6.0.0-preview.3.21201.2</MicrosoftEntityFrameworkCoreSqlServerVersion60>
     <MicrosoftEntityFrameworkCoreSqliteVersion21>2.1.14</MicrosoftEntityFrameworkCoreSqliteVersion21>
     <MicrosoftEntityFrameworkCoreSqliteVersion22>2.2.6</MicrosoftEntityFrameworkCoreSqliteVersion22>
     <MicrosoftEntityFrameworkCoreSqliteVersion30>3.0.3</MicrosoftEntityFrameworkCoreSqliteVersion30>
     <MicrosoftEntityFrameworkCoreSqliteVersion31>3.1.13</MicrosoftEntityFrameworkCoreSqliteVersion31>
-    <MicrosoftEntityFrameworkCoreSqliteVersion50>5.0.4</MicrosoftEntityFrameworkCoreSqliteVersion50>
+    <MicrosoftEntityFrameworkCoreSqliteVersion50>6.0.0-preview.3.21201.2</MicrosoftEntityFrameworkCoreSqliteVersion50>
     <MicrosoftEntityFrameworkCoreSqliteVersion60>6.0.0-preview.3.21201.2</MicrosoftEntityFrameworkCoreSqliteVersion60>
   </PropertyGroup>
 
