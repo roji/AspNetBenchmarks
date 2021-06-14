@@ -50,6 +50,7 @@ namespace PlatformBenchmarks
                 await db.OpenAsync();
 
                 var (cmd, idParameter) = CreateReadCommand(db);
+                cmd.Prepare();
                 using (cmd)
                 {
                     for (int i = 0; i < result.Length; i++)
@@ -150,6 +151,7 @@ namespace PlatformBenchmarks
                 await db.OpenAsync();
 
                 var (queryCmd, queryParameter) = CreateReadCommand(db);
+                queryCmd.Prepare();
                 using (queryCmd)
                 {
                     for (int i = 0; i < results.Length; i++)
